@@ -5,46 +5,33 @@ import { adminAuth } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
-/* ================= ADMIN UPLOAD IMAGE ================= */
-router.post(
-  "/upload",
-  adminAuth,
-  upload.single("image"),
-  (req, res) => {
-    const category = req.body.category?.toLowerCase();
+/* ADMIN UPLOAD */
+router.post("/upload", adminAuth, upload.single("image"), (req, res) => {
+  const { category } = req.body;
 
-    if (!req.file || !category) {
-      return res.status(400).json({ message: "Invalid upload" });
-    }
-
-    const imageUrl = `uploads/gallery/${req.file.filename}`;
-
-    db.query(
-      "INSERT INTO gallery_images (category, image_url) VALUES (?, ?)",
-      [category, imageUrl],
-      (err) => {
-        if (err) {
-          console.error("DB ERROR:", err);
-          return res.status(500).json({ message: "DB error" });
-        }
-        res.json({ message: "Image uploaded successfully" });
-      }
-    );
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
   }
-);
-
-/* ================= PUBLIC FETCH ================= */
-router.get("/:category", (req, res) => {
-  const category = req.params.category.toLowerCase();
 
   db.query(
-    "SELECT * FROM gallery_images WHERE category = ? ORDER BY id DESC",
-    [category],
-    (err, rows) => {
+    "INSERT INTO gallery_images (category, image_url) VALUES (?, ?)",
+    [category, req.file.path],
+    (err) => {
       if (err) {
-        console.error("DB ERROR:", err);
         return res.status(500).json({ message: "DB error" });
       }
+      res.json({ message: "Image uploaded successfully" });
+    }
+  );
+});
+
+/* PUBLIC FETCH */
+router.get("/:category", (req, res) => {
+  db.query(
+    "SELECT image_url FROM gallery_images WHERE category = ? ORDER BY id DESC",
+    [req.params.category],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: "DB error" });
       res.json(rows);
     }
   );
