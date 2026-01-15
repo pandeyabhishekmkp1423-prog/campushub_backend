@@ -1,84 +1,122 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import db from "../config/db.js";
+import supabase from "../config/supabase.js";
 
-/* REGISTER */
+/* =========================
+   REGISTER (STUDENT)
+========================= */
 export const register = async (req, res) => {
-  const { name, email, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
+  try {
+    const { name, email, password } = req.body;
 
-  db.query(
-    "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-    [name, email, hashedPassword],
-    (err) => {
-      if (err) {
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(400).json({ message: "Email already exists" });
-        }
-        return res.status(500).json({ message: "Database error" });
-      }
-      res.status(201).json({ message: "User registered successfully" });
+    // Check duplicate email
+    const { data: existing } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existing) {
+      return res.status(400).json({ message: "Email already exists" });
     }
-  );
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { error } = await supabase.from("users").insert([
+      {
+        name,
+        email,
+        password: hashedPassword,
+        role: "student",
+      },
+    ]);
+
+    if (error) throw error;
+
+    res.status(201).json({ message: "User registered successfully" });
+  } catch (err) {
+    console.error("❌ REGISTER ERROR:", err);
+    res.status(500).json({ message: "Registration failed" });
+  }
 };
 
-/* LOGIN (STUDENT) */
-export const login = (req, res) => {
-  const { email, password } = req.body;
+/* =========================
+   LOGIN (STUDENT)
+========================= */
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  db.query(
-    "SELECT * FROM users WHERE email = ?",
-    [email],
-    async (err, result) => {
-      if (err) return res.status(500).json({ message: "Database error" });
-      if (result.length === 0)
-        return res.status(401).json({ message: "Invalid credentials" });
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .single();
 
-      const user = result[0];
-      const isMatch = await bcrypt.compare(password, user.password);
-
-      if (!isMatch)
-        return res.status(401).json({ message: "Invalid credentials" });
-
-      const token = jwt.sign(
-        { id: user.id, role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-      );
-
-      res.json({ token, role: user.role, name: user.name });
+    if (error || !user) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-  );
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      token,
+      role: user.role,
+      name: user.name,
+    });
+  } catch (err) {
+    console.error("❌ LOGIN ERROR:", err);
+    res.status(500).json({ message: "Login failed" });
+  }
 };
 
-/* LOGIN (ADMIN ONLY) */
-export const adminLogin = (req, res) => {
-  console.log("🔥 adminLogin HIT");
-  console.log("BODY:", req.body);
+/* =========================
+   LOGIN (ADMIN ONLY)
+========================= */
+export const adminLogin = async (req, res) => {
+  try {
+    console.log("🔥 adminLogin HIT", req.body);
 
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  db.query(
-    "SELECT * FROM users WHERE email = ? AND role = 'admin'",
-    [email],
-    async (err, result) => {
-      if (err) return res.status(500).json({ message: "Database error" });
-      if (result.length === 0)
-        return res.status(401).json({ message: "Admin not found" });
+    const { data: admin, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .eq("role", "admin")
+      .single();
 
-      const admin = result[0];
-      const isMatch = await bcrypt.compare(password, admin.password);
-
-      if (!isMatch)
-        return res.status(401).json({ message: "Invalid password" });
-
-      const token = jwt.sign(
-        { id: admin.id, role: admin.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "1d" }
-      );
-
-      res.json({ token, role: admin.role, name: admin.name });
+    if (error || !admin) {
+      return res.status(401).json({ message: "Admin not found" });
     }
-  );
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    const token = jwt.sign(
+      { id: admin.id, role: admin.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      token,
+      role: admin.role,
+      name: admin.name,
+    });
+  } catch (err) {
+    console.error("❌ ADMIN LOGIN ERROR:", err);
+    res.status(500).json({ message: "Admin login failed" });
+  }
 };

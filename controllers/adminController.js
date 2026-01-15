@@ -1,26 +1,36 @@
-import db from "../config/db.js";
+import supabase from "../config/supabase.js";
 
-export const getDashboardStats = (req, res) => {
-  const stats = {};
+/* =========================
+   ADMIN DASHBOARD STATS
+========================= */
+export const getDashboardStats = async (req, res) => {
+  try {
+    // Users count
+    const { count: users } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true });
 
-  db.query("SELECT COUNT(*) AS users FROM users", (e1, r1) => {
-    if (e1) return res.status(500).json({ message: "DB error" });
-    stats.users = r1[0].users;
+    // Notices count
+    const { count: notices } = await supabase
+      .from("notices")
+      .select("*", { count: "exact", head: true });
 
-    db.query("SELECT COUNT(*) AS notices FROM notices", (e2, r2) => {
-      if (e2) return res.status(500).json({ message: "DB error" });
-      stats.notices = r2[0].notices;
+    // Courses count
+    const { count: courses } = await supabase
+      .from("courses")
+      .select("*", { count: "exact", head: true });
 
-      db.query("SELECT COUNT(*) AS courses FROM courses", (e3, r3) => {
-        if (e3) return res.status(500).json({ message: "DB error" });
-        stats.courses = r3[0].courses;
-
-        res.json({
-          message: "Admin dashboard access granted",
-          admin: req.admin,
-          stats,
-        });
-      });
+    res.json({
+      message: "Admin dashboard access granted",
+      admin: req.admin,
+      stats: {
+        users,
+        notices,
+        courses,
+      },
     });
-  });
+  } catch (err) {
+    console.error("❌ DASHBOARD ERROR:", err);
+    res.status(500).json({ message: "Dashboard fetch failed" });
+  }
 };

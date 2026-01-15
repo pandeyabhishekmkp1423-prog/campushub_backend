@@ -1,6 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config(); // ✅ MUST BE FIRST
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 
 import authRoutes from "./routes/authRoutes.js";
 import noticeRoutes from "./routes/noticeRoutes.js";
@@ -9,13 +11,16 @@ import courseRoutes from "./routes/courseRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import enquiryRoutes from "./routes/enquiryRoutes.js";
 
-dotenv.config();
-
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-app.use("/uploads", express.static("uploads"));
 
 app.use("/auth", authRoutes);
 app.use("/notices", noticeRoutes);
@@ -26,6 +31,10 @@ app.use("/admin", adminRoutes);
 
 app.get("/", (req, res) => {
   res.send("CampusHub API running");
+});
+
+app.get("/health", (req, res) => {
+  res.send("OK");
 });
 
 const PORT = process.env.PORT || 5000;

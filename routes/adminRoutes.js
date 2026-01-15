@@ -1,74 +1,88 @@
 import express from "express";
-import db from "../config/db.js";
+import supabase from "../config/supabase.js";
 import { adminAuth } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
 /* =========================
-   ADMIN DASHBOARD (EXISTING)
+   ADMIN DASHBOARD
 ========================= */
-router.get("/dashboard", adminAuth, (req, res) => {
-  const data = {};
+router.get("/dashboard", adminAuth, async (req, res) => {
+  try {
+    const data = {};
 
-  db.query("SELECT COUNT(*) AS users FROM users", (e1, r1) => {
-    if (e1) return res.status(500).json({ message: "DB error" });
-    data.users = r1[0].users;
+    // USERS COUNT
+    const { count: usersCount, error: usersErr } = await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true });
+    if (usersErr) throw usersErr;
+    data.users = usersCount;
 
-    db.query("SELECT COUNT(*) AS notices FROM notices", (e2, r2) => {
-      if (e2) return res.status(500).json({ message: "DB error" });
-      data.notices = r2[0].notices;
+    // NOTICES COUNT
+    const { count: noticesCount, error: noticesErr } = await supabase
+      .from("notices")
+      .select("*", { count: "exact", head: true });
+    if (noticesErr) throw noticesErr;
+    data.notices = noticesCount;
 
-      db.query("SELECT COUNT(*) AS courses FROM courses", (e3, r3) => {
-        if (e3) return res.status(500).json({ message: "DB error" });
-        data.courses = r3[0].courses;
+    // COURSES COUNT
+    const { count: coursesCount, error: coursesErr } = await supabase
+      .from("courses")
+      .select("*", { count: "exact", head: true });
+    if (coursesErr) throw coursesErr;
+    data.courses = coursesCount;
 
-        /* Recent Enquiries */
-        db.query(
-          "SELECT name, email, phone, course_interest FROM enquiries ORDER BY created_at DESC LIMIT 5",
-          (e4, r4) => {
-            if (e4) return res.status(500).json({ message: "DB error" });
-            data.recentEnquiries = r4;
+    // RECENT ENQUIRIES
+    const { data: recentEnquiries, error: enquiriesErr } = await supabase
+      .from("enquiries")
+      .select("name, email, phone, course_interest, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (enquiriesErr) throw enquiriesErr;
+    data.recentEnquiries = recentEnquiries;
 
-            /* Recent Notices */
-            db.query(
-              "SELECT title, category FROM notices ORDER BY created_at DESC LIMIT 5",
-              (e5, r5) => {
-                if (e5) return res.status(500).json({ message: "DB error" });
-                data.recentNotices = r5;
+    // RECENT NOTICES
+    const { data: recentNotices, error: noticesListErr } = await supabase
+      .from("notices")
+      .select("title, category, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (noticesListErr) throw noticesListErr;
+    data.recentNotices = recentNotices;
 
-                /* Recent Courses */
-                db.query(
-                  "SELECT name, level FROM courses ORDER BY created_at DESC LIMIT 5",
-                  (e6, r6) => {
-                    if (e6) return res.status(500).json({ message: "DB error" });
-                    data.recentCourses = r6;
+    // RECENT COURSES
+    const { data: recentCourses, error: coursesListErr } = await supabase
+      .from("courses")
+      .select("name, level, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (coursesListErr) throw coursesListErr;
+    data.recentCourses = recentCourses;
 
-                    res.json(data);
-                  }
-                );
-              }
-            );
-          }
-        );
-      });
-    });
-  });
+    res.json(data);
+  } catch (err) {
+    console.error("❌ ADMIN DASHBOARD ERROR:", err);
+    res.status(500).json({ message: "Dashboard fetch failed" });
+  }
 });
 
 /* =========================
    ADMIN – VIEW ALL ENQUIRIES
 ========================= */
-router.get("/enquiries", adminAuth, (req, res) => {
-  db.query(
-    "SELECT * FROM enquiries ORDER BY created_at DESC",
-    (err, rows) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).json({ message: "DB error" });
-      }
-      res.json(rows);
-    }
-  );
+router.get("/enquiries", adminAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("enquiries")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error("❌ ENQUIRIES FETCH ERROR:", err);
+    res.status(500).json({ message: "Failed to fetch enquiries" });
+  }
 });
 
 export default router;
