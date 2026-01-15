@@ -9,7 +9,6 @@ export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Check duplicate email
     const { data: existing } = await supabase
       .from("users")
       .select("id")
@@ -80,40 +79,38 @@ export const login = async (req, res) => {
 };
 
 /* =========================
-   LOGIN (ADMIN ONLY)
+   LOGIN (ADMIN ONLY) ✅ FIXED
 ========================= */
 export const adminLogin = async (req, res) => {
   try {
-    console.log("🔥 adminLogin HIT", req.body);
-
     const { email, password } = req.body;
 
     const { data: admin, error } = await supabase
-      .from("users")
+      .from("admins") // ✅ CORRECT TABLE
       .select("*")
       .eq("email", email)
-      .eq("role", "admin")
       .single();
 
     if (error || !admin) {
-      return res.status(401).json({ message: "Admin not found" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid password" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const token = jwt.sign(
-      { id: admin.id, role: admin.role },
+      { id: admin.id, role: "admin" },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
     res.json({
       token,
-      role: admin.role,
+      role: "admin",
       name: admin.name,
+      email: admin.email,
     });
   } catch (err) {
     console.error("❌ ADMIN LOGIN ERROR:", err);

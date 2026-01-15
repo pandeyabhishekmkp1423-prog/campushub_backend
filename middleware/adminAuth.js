@@ -4,7 +4,7 @@ export const adminAuth = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "No token provided" });
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
   try {
@@ -12,7 +12,7 @@ export const adminAuth = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (decoded.role !== "admin") {
-      return res.status(403).json({ message: "Admin access only" });
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     req.admin = decoded;
