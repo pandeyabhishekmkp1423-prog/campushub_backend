@@ -17,20 +17,18 @@ app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
-/* ROUTES */
 app.use("/auth", authRoutes);
 app.use("/notices", noticeRoutes);
 app.use("/gallery", galleryRoutes);
 app.use("/courses", courseRoutes);
-
-/* ✅ PUBLIC ENQUIRY */
-app.use("/public", enquiryRoutes);
-
-/* ✅ ADMIN */
+app.use("/admin/enquiries", enquiryRoutes);
 app.use("/admin", adminRoutes);
 
-app.get("/", (req, res) => res.send("CampusHub API running"));
+app.get("/", (req, res) => {
+  res.send("CampusHub API running");
+});
 
-app.listen(5000, () =>
-  console.log("Server running on http://localhost:5000")
-);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
