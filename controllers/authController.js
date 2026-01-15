@@ -86,7 +86,7 @@ export const adminLogin = async (req, res) => {
     const { email, password } = req.body;
 
     const { data: admin, error } = await supabase
-      .from("admins") // ✅ CORRECT TABLE
+      .from("admins")
       .select("*")
       .eq("email", email)
       .single();
@@ -110,10 +110,9 @@ export const adminLogin = async (req, res) => {
       token,
       role: "admin",
       name: admin.name,
-      email: admin.email,
     });
   } catch (err) {
-    console.error("❌ ADMIN LOGIN ERROR:", err);
+    console.error("ADMIN LOGIN ERROR:", err);
     res.status(500).json({ message: "Admin login failed" });
   }
 };
