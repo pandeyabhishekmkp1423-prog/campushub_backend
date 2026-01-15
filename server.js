@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-dotenv.config(); // ✅ MUST BE FIRST
+dotenv.config();
 
 import express from "express";
 import cors from "cors";
@@ -13,9 +13,6 @@ import enquiryRoutes from "./routes/enquiryRoutes.js";
 
 const app = express();
 
-/* =========================
-   MIDDLEWARE
-========================= */
 app.use(
   cors({
     origin: [
@@ -28,27 +25,19 @@ app.use(
 
 app.use(express.json());
 
-/* =========================
-   ROUTES
-========================= */
+// ✅ PUBLIC ROUTES
 app.use("/auth", authRoutes);
 app.use("/notices", noticeRoutes);
 app.use("/gallery", galleryRoutes);
 app.use("/courses", courseRoutes);
 
-/**
- * IMPORTANT:
- * enquiryRoutes already contains:
- *  - POST /public/enquiry
- *  - GET  /admin/enquiries
- */
-app.use("/", enquiryRoutes);
+// ✅ PUBLIC ENQUIRY (NEW)
+app.use("/enquiry", enquiryRoutes);
 
+// ✅ ADMIN ROUTES
 app.use("/admin", adminRoutes);
+app.use("/admin/enquiries", enquiryRoutes);
 
-/* =========================
-   HEALTH CHECK
-========================= */
 app.get("/", (req, res) => {
   res.send("CampusHub API running");
 });
@@ -57,9 +46,6 @@ app.get("/health", (req, res) => {
   res.send("OK");
 });
 
-/* =========================
-   START SERVER
-========================= */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
