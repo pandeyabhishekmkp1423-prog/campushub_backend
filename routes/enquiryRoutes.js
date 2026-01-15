@@ -1,16 +1,16 @@
 import express from "express";
+import { adminAuth } from "../middleware/adminAuth.js";
 import {
   createEnquiry,
   getAllEnquiries,
 } from "../controllers/enquiryController.js";
-import verifyAdmin from "../middleware/verifyAdmin.js";
 
 const router = express.Router();
 
-// ✅ PUBLIC — student enquiry
+// PUBLIC: students submit enquiry
 router.post("/", createEnquiry);
 
-// ✅ ADMIN — view enquiries
-router.get("/", verifyAdmin, getAllEnquiries);
+// ADMIN: view enquiries (protected)
+router.get("/", adminAuth, getAllEnquiries);
 
 export default router;
