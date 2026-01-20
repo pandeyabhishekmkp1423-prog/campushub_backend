@@ -6,7 +6,6 @@ import cors from "cors";
 
 import authRoutes from "./routes/authRoutes.js";
 import noticeRoutes from "./routes/noticeRoutes.js";
-import galleryRoutes from "./routes/galleryRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import enquiryRoutes from "./routes/enquiryRoutes.js";
@@ -28,16 +27,16 @@ app.use(express.json());
 // ✅ PUBLIC ROUTES
 app.use("/auth", authRoutes);
 app.use("/notices", noticeRoutes);
-app.use("/gallery", galleryRoutes);
 app.use("/courses", courseRoutes);
 
-// ✅ PUBLIC ENQUIRY (NEW)
+// ✅ PUBLIC ENQUIRY
 app.use("/enquiry", enquiryRoutes);
 
 // ✅ ADMIN ROUTES
 app.use("/admin", adminRoutes);
 app.use("/admin/enquiries", enquiryRoutes);
 
+// ✅ HEALTH CHECKS
 app.get("/", (req, res) => {
   res.send("CampusHub API running");
 });
