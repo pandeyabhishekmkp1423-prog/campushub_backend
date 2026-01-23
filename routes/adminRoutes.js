@@ -85,4 +85,28 @@ router.get("/enquiries", adminAuth, async (req, res) => {
   }
 });
 
+/* =========================
+   ADMIN – SAVE GALLERY IMAGE (DB ONLY)
+========================= */
+router.post("/gallery", adminAuth, async (req, res) => {
+  try {
+    const { category, image_url } = req.body;
+
+    if (!category || !image_url) {
+      return res.status(400).json({ message: "Missing data" });
+    }
+
+    const { error } = await supabase
+      .from("gallery_images")
+      .insert([{ category, image_url }]);
+
+    if (error) throw error;
+
+    res.json({ message: "Image saved successfully" });
+  } catch (err) {
+    console.error("❌ GALLERY INSERT ERROR:", err);
+    res.status(500).json({ message: "Failed to save image" });
+  }
+});
+
 export default router;
