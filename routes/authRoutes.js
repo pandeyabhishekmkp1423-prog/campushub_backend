@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
-router.post("/admin/login", adminLogin); // ✅ clear separation
+router.post("/admin/login", adminLogin);
 
 export default router;

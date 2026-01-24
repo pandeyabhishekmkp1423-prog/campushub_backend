@@ -1,17 +1,18 @@
-import dotenv from "dotenv";
-dotenv.config();
-
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 
-import authRoutes from "./routes/authRoutes.js";
-import noticeRoutes from "./routes/noticeRoutes.js";
-import courseRoutes from "./routes/courseRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
-import enquiryRoutes from "./routes/enquiryRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import publicRoutes from "./routes/publicRoutes.js";
+
+dotenv.config();
 
 const app = express();
 
+/* =========================
+   CORS
+========================= */
 app.use(
   cors({
     origin: [
@@ -22,29 +23,28 @@ app.use(
   })
 );
 
+/* =========================
+   MIDDLEWARES
+========================= */
 app.use(express.json());
 
-// ✅ PUBLIC ROUTES
-app.use("/auth", authRoutes);
-app.use("/notices", noticeRoutes);
-app.use("/courses", courseRoutes);
-
-// ✅ PUBLIC ENQUIRY
-app.use("/enquiry", enquiryRoutes);
-
-// ✅ ADMIN ROUTES
+/* =========================
+   ROUTES
+========================= */
 app.use("/admin", adminRoutes);
-app.use("/admin/enquiries", enquiryRoutes);
+app.use("/auth", authRoutes);
+app.use("/", publicRoutes);
 
-// ✅ HEALTH CHECKS
-app.get("/", (req, res) => {
+/* =========================
+   HEALTH CHECK
+========================= */
+app.get("/", (_, res) => {
   res.send("CampusHub API running");
 });
 
-app.get("/health", (req, res) => {
-  res.send("OK");
-});
-
+/* =========================
+   SERVER
+========================= */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

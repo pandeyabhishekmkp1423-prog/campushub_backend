@@ -1,6 +1,7 @@
 import express from "express";
 import supabase from "../config/supabase.js";
 import { adminAuth } from "../middleware/adminAuth.js";
+import upload from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -9,104 +10,198 @@ const router = express.Router();
 ========================= */
 router.get("/dashboard", adminAuth, async (req, res) => {
   try {
-    const data = {};
+    const [
+      usersRes,
+      noticesRes,
+      coursesRes,
+      enquiriesRes,
+    ] = await Promise.all([
+      supabase.from("users").select("*", { count: "exact", head: true }),
+      supabase.from("notices").select("*", { count: "exact", head: true }),
+      supabase.from("courses").select("*", { count: "exact", head: true }),
+      supabase
+        .from("enquiries")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
 
-    // USERS COUNT
-    const { count: usersCount, error: usersErr } = await supabase
-      .from("users")
-      .select("*", { count: "exact", head: true });
-    if (usersErr) throw usersErr;
-    data.users = usersCount;
-
-    // NOTICES COUNT
-    const { count: noticesCount, error: noticesErr } = await supabase
-      .from("notices")
-      .select("*", { count: "exact", head: true });
-    if (noticesErr) throw noticesErr;
-    data.notices = noticesCount;
-
-    // COURSES COUNT
-    const { count: coursesCount, error: coursesErr } = await supabase
-      .from("courses")
-      .select("*", { count: "exact", head: true });
-    if (coursesErr) throw coursesErr;
-    data.courses = coursesCount;
-
-    // RECENT ENQUIRIES
-    const { data: recentEnquiries, error: enquiriesErr } = await supabase
-      .from("enquiries")
-      .select("name, email, phone, course_interest, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (enquiriesErr) throw enquiriesErr;
-    data.recentEnquiries = recentEnquiries;
-
-    // RECENT NOTICES
-    const { data: recentNotices, error: noticesListErr } = await supabase
-      .from("notices")
-      .select("title, category, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (noticesListErr) throw noticesListErr;
-    data.recentNotices = recentNotices;
-
-    // RECENT COURSES
-    const { data: recentCourses, error: coursesListErr } = await supabase
-      .from("courses")
-      .select("name, level, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (coursesListErr) throw coursesListErr;
-    data.recentCourses = recentCourses;
-
-    res.json(data);
-  } catch (err) {
-    console.error("❌ ADMIN DASHBOARD ERROR:", err);
+    res.json({
+      users: usersRes.count,
+      notices: noticesRes.count,
+      courses: coursesRes.count,
+      recentEnquiries: enquiriesRes.data,
+    });
+  } catch {
     res.status(500).json({ message: "Dashboard fetch failed" });
   }
 });
 
 /* =========================
-   ADMIN – VIEW ALL ENQUIRIES
+   ADMIN – NOTICES
 ========================= */
-router.get("/enquiries", adminAuth, async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("enquiries")
-      .select("*")
-      .order("created_at", { ascending: false });
+/* =========================
+   NOTICES (FULL CRUD)
+========================= */
 
-    if (error) throw error;
+// GET ALL NOTICES
+router.get("/notices", adminAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from("notices")
+    .select("*")
+    .order("created_at", { ascending: false });
 
-    res.json(data);
-  } catch (err) {
-    console.error("❌ ENQUIRIES FETCH ERROR:", err);
-    res.status(500).json({ message: "Failed to fetch enquiries" });
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
+});
+
+// ADD NOTICE
+router.post("/notices", adminAuth, async (req, res) => {
+  const { title, description, category } = req.body;
+
+  if (!title || !description || !category) {
+    return res.status(400).json({ message: "All fields required" });
   }
+
+  const { error } = await supabase.from("notices").insert({
+    title,
+    description,
+    category,
+  });
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.status(201).json({ message: "Notice added" });
+});
+
+// DELETE NOTICE
+router.delete("/notices/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const { error } = await supabase
+    .from("notices")
+    .delete()
+    .eq("id", id);
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.json({ message: "Notice deleted" });
+});
+
+
+/* =========================
+   ADMIN – COURSES
+========================= */
+/* =========================
+   ADMIN – COURSES
+========================= */
+
+// GET all courses
+router.get("/courses", adminAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from("courses")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
+});
+
+// ADD course
+router.post("/courses", adminAuth, async (req, res) => {
+  const { name, level, duration, description } = req.body;
+
+  if (!name || !level) {
+    return res.status(400).json({ message: "Name and level are required" });
+  }
+
+  const { error } = await supabase.from("courses").insert({
+    name,
+    level,
+    duration,
+    description,
+  });
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.status(201).json({ message: "Course added" });
+});
+
+// DELETE course
+router.delete("/courses/:id", adminAuth, async (req, res) => {
+  const { id } = req.params;
+
+  const { error } = await supabase
+    .from("courses")
+    .delete()
+    .eq("id", id);
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.json({ message: "Course deleted" });
+});
+
+
+/* =========================
+   ADMIN – ENQUIRIES
+========================= */
+router.get("/enquiries", adminAuth, async (_, res) => {
+  const { data, error } = await supabase
+    .from("enquiries")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return res.status(500).json({ message: error.message });
+  res.json(data);
 });
 
 /* =========================
-   ADMIN – SAVE GALLERY IMAGE (DB ONLY)
+   ADMIN – GALLERY UPLOAD
 ========================= */
-router.post("/gallery", adminAuth, async (req, res) => {
-  try {
-    const { category, image_url } = req.body;
+router.post(
+  "/gallery/upload",
+  adminAuth,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { category } = req.body;
+      const file = req.file;
 
-    if (!category || !image_url) {
-      return res.status(400).json({ message: "Missing data" });
+      if (!category || !file) {
+        return res.status(400).json({ message: "category and image required" });
+      }
+
+      const ext = file.originalname.split(".").pop();
+      const filePath = `${category}/${Date.now()}.${ext}`;
+
+      const { error: storageError } = await supabase.storage
+        .from("campus-memories")
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+        });
+
+      if (storageError) {
+        return res.status(500).json({ message: storageError.message });
+      }
+
+      const { data } = supabase.storage
+        .from("campus-memories")
+        .getPublicUrl(filePath);
+
+      const { error: dbError } = await supabase
+        .from("gallery_images")
+        .insert({
+          category,
+          image_url: data.publicUrl,
+          file_path: filePath,
+          is_published: true,
+        });
+
+      if (dbError) {
+        return res.status(500).json({ message: dbError.message });
+      }
+
+      res.status(201).json({ message: "Image uploaded successfully" });
+    } catch {
+      res.status(500).json({ message: "Upload failed" });
     }
-
-    const { error } = await supabase
-      .from("gallery_images")
-      .insert([{ category, image_url }]);
-
-    if (error) throw error;
-
-    res.json({ message: "Image saved successfully" });
-  } catch (err) {
-    console.error("❌ GALLERY INSERT ERROR:", err);
-    res.status(500).json({ message: "Failed to save image" });
   }
-});
+);
 
 export default router;
