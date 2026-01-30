@@ -31,9 +31,9 @@ app.use(express.json());
 /* =========================
    ROUTES
 ========================= */
-app.use("/admin", adminRoutes);
-app.use("/auth", authRoutes);
-app.use("/", publicRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api", publicRoutes);
 
 /* =========================
    HEALTH CHECK
